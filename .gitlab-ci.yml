@@ -1,0 +1,63 @@
+stages:
+  - build
+  - test
+  - int_test
+  - deploy
+  - status
+
+build:
+  stage: build
+  script:
+    - echo "building cat ..."
+    - cd src/cat
+    - make
+    - echo "building grep ..."
+    - cd ../grep
+    - make
+  artifacts:
+    paths:
+      - src/cat
+      - src/grep
+    expire_in: 30 days
+
+test:
+  stage: test
+  script:
+    - echo "checking style test ..."
+    - sh src/style_test.sh
+
+int_test:
+  stage: int_test
+  needs:
+    - build
+    - test
+  script:
+    - echo "checking integral test ..."
+    - sh src/check_int_test.sh
+    - echo "CI:"
+    - sh src/bot.sh "CI status - SUCCESS"
+
+status_ci:
+  stage: status
+  when: on_failure
+  script:
+    - sh src/bot.sh "CI status - FAIL"
+
+deploy:
+  stage: deploy
+  needs:
+    - build
+    - test
+    - int_test
+  script:
+    - echo "deployka"
+    - sh src/copy.sh
+    - echo "CD-deploy"
+    - sh src/bot.sh "CD status - SUCCESS"
+  when: manual
+
+status_cd:
+  stage: status
+  when: on_failure
+  script:
+    - sh src/bot.sh "CD status - FAIL"
